@@ -407,6 +407,7 @@ class Participant(Model, MixinTeam):
                  , claimed_time=NULL
                  , session_token=NULL
                  , session_expires=now()
+                 , balanced_customer_href=NULL
                  , giving=0
                  , pledging=0
                  , receiving=0
@@ -424,6 +425,7 @@ class Participant(Model, MixinTeam):
                            , claimed_time=None
                            , session_token=None
                            , session_expires=session_expires
+                           , balanced_customer_href=None
                            , giving=0
                            , pledging=0
                            , receiving=0
@@ -1012,6 +1014,7 @@ class Participant(Model, MixinTeam):
                      , claimed_time=NULL
                      , session_token=NULL
                      , session_expires=now()
+                     , balanced_customer_href=NULL
                  WHERE username=%s
              RETURNING username
 
