@@ -25,7 +25,7 @@ import balanced
 import aspen.utils
 from aspen import log
 from aspen.utils import typecheck
-from gittip.exceptions import NegativeBalance
+from gittip.exceptions import NegativeBalance, NoBalancedCustomerHref, NotWhitelisted
 from psycopg2 import IntegrityError
 
 
@@ -328,7 +328,14 @@ class Payday(object):
             if i % 100 == 0:
                 log("Payout done for %d participants." % i)
             withhold = participant.giving + participant.pledging
-            error = self.ach_credit(participant, withhold)
+            try:
+                error = self.ach_credit(participant, withhold)
+            except NoBalancedCustomerHref:
+                continue
+            except NotWhitelisted:
+                if participant.is_suspicious is None:
+                    log("UNREVIEWED: %s" % participant.username)
+                continue
             if error:
                 self.mark_ach_failed()
         log("Did payout for %d participants." % i)
@@ -689,8 +696,14 @@ class Payday(object):
                % (minimum_credit, participant.username, amount, also_log))
             return      # Participant owed too little.
 
-        if not is_whitelisted(participant):
-            return      # Participant not trusted.
+        if not participant.is_whitelisted:
+            raise NotWhitelisted      # Participant not trusted.
+
+        balanced_customer_href = participant.balanced_customer_href
+        if balanced_customer_href is None:
+            log("%s has no balanced_customer_href."
+                % participant.username)
+            raise NoBalancedCustomerHref  # not in Balanced
 
 
         # Do final calculations.
@@ -712,12 +725,6 @@ class Payday(object):
         # ===========================
 
         try:
-            balanced_customer_href = participant.balanced_customer_href
-            if balanced_customer_href is None:
-                log("%s has no balanced_customer_href."
-                    % participant.username)
-                return  # not in Balanced
-
             customer = balanced.Customer.fetch(balanced_customer_href)
             customer.bank_accounts.one()\
                                   .credit(amount=cents,
