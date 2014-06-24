@@ -96,8 +96,6 @@ class Payday(object):
 
         self.end()
 
-        self.db.self_check()
-
         _end = aspen.utils.utcnow()
         _delta = _end - _start
         fmt_past = "Script ran for {age} (%s)." % _delta
@@ -428,6 +426,8 @@ class Payday(object):
             if error:
                 self.mark_ach_failed()
         log("Did payout for %d participants." % i)
+        self.db.self_check()
+        log("Checked the DB.")
 
 
     def update_stats(self):
